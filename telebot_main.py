@@ -8,7 +8,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 #Starting our bot
 #Initialize updator and dispatcher
-updater = Updater(token='TOKEN', use_context=True)
+updater = Updater(token='1997844468:AAFZ3l4HNnMkJkZ98WipesBVOFxrG11dKdo', use_context=True)
 dispatcher = updater.dispatcher
 
 
@@ -17,7 +17,8 @@ def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 def echo(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+    reply = update.message.text + update.message.from_user.first_name
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply)
 
 def caps(update, context):
     text_caps = ' '.join(context.args).upper()
@@ -42,3 +43,4 @@ dispatcher.add_handler(caps_handler)
 dispatcher.add_handler(unknown_handler)
 
 updater.start_polling()
+updater.idle()
