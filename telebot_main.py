@@ -8,7 +8,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 #Starting our bot
 #Initialize updator and dispatcher
-updater = Updater(token='1997844468:AAFZ3l4HNnMkJkZ98WipesBVOFxrG11dKdo', use_context=True)
+updater = Updater(token='', use_context=True)
 dispatcher = updater.dispatcher
 
 
