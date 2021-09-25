@@ -1,14 +1,19 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
+import os
+from dotenv import load_dotenv
 
+#Load environment varibales
+load_dotenv()
+BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
-
+PORT = int(os.environ.get('PORT', 5000))
 #Starting our bot
 #Initialize updator and dispatcher
-updater = Updater(token='1997844468:AAFZ3l4HNnMkJkZ98WipesBVOFxrG11dKdo', use_context=True)
+updater = Updater(token= BOT_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
 
@@ -42,5 +47,10 @@ dispatcher.add_handler(echo_handler)
 dispatcher.add_handler(caps_handler)
 dispatcher.add_handler(unknown_handler)
 
-updater.start_polling()
+updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=BOT_API_TOKEN)
+updater.bot.setWebhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+print("Server Bot is up and running !")
 updater.idle()
+print("Listening .... ")
