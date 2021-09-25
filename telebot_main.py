@@ -39,13 +39,15 @@ def pull_request_logic(context):
     response = requests.get(url)
     json = response.json()
 
-    top_5 = json[0:5]
+    top_5 = json[0:1]
     new_pulls = []
 
     for i in top_5:
         create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
         time_difference = (datetime.datetime.now() - create_time).total_seconds()
-        if time_difference < 300 :
+        #28800 -> conversion from utc to gmt+8
+        # + 5 mins is 29100
+        if time_difference < 29100 :
             new_pulls.append(i)
         
     reply_text = ("Hi, here is the list of new Pull Request for pinus-telebot: \n")
