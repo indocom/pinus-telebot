@@ -10,7 +10,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 #Starting our bot
 #Initialize updator and dispatcher
-updater = Updater(token='TOKEN', use_context=True)
+updater = Updater(token='', use_context=True)
 dispatcher = updater.dispatcher
 
 
@@ -82,3 +82,4 @@ dispatcher.add_handler(new_pull_request_handler)
 dispatcher.add_handler(unknown_handler)
 
 updater.start_polling()
+updater.idle()
