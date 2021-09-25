@@ -1,11 +1,10 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
 import os
-from dotenv import load_dotenv
 
-#Load environment varibales
-load_dotenv()
-BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
+
+
+BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
