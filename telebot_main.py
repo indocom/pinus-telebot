@@ -35,7 +35,7 @@ def repo_list(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
 def pull_request_logic(context):
-    url = "https://api.github.com/repos/indocom/pinus-client/pulls"
+    url = "https://api.github.com/repos/indocom/pinus-telebot/pulls"
     response = requests.get(url)
     json = response.json()
 
@@ -48,7 +48,7 @@ def pull_request_logic(context):
         if time_difference < 300 :
             new_pulls.append(i)
         
-    reply_text = ("Hi, here is the list of new Pull Request for pinus-client: \n")
+    reply_text = ("Hi, here is the list of new Pull Request for pinus-telebot: \n")
     for i in new_pulls:
         reply_text += ("- " + i["title"] + " : " + i["html_url"] + "\n")
     
@@ -59,7 +59,7 @@ def new_pull_request(update, context):
     text = "Giving you Pull Request updates of pinus-telebot every 5 minutes"
     context.bot.send_message(chat_id=update.message.chat_id, text=text)
 
-    context.job_queue.run_repeating(pull_request_logic, interval = 10, first = 1, context=update.message.chat_id)
+    context.job_queue.run_repeating(pull_request_logic, interval = 300, first = 1, context=update.message.chat_id)
 
 
 
