@@ -37,7 +37,7 @@ def pull_request_logic(context):
     response = requests.get(url)
     json = response.json()
 
-    top_5 = json[0:1]
+    top_5 = json[0:5]
     new_pulls = []
 
     for i in top_5:
