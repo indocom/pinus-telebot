@@ -5,7 +5,7 @@ import datetime
 import os
 
 BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
-PORT = int(os.environ.get('PORT', 5000))
+PORT = int(os.environ.get('PORT', 8443))
 
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -87,10 +87,9 @@ dispatcher.add_handler(unknown_handler)
 
 updater.start_webhook(listen="0.0.0.0",
                           port=int(PORT),
-                          url_path=BOT_API_TOKEN,
-                          webhook_url='https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN
+                          url_path=BOT_API_TOKEN
                           )
-
+updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
