@@ -3,6 +3,8 @@ import logging
 import requests
 import datetime
 
+chat_ids = [176037276]
+
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
@@ -37,7 +39,7 @@ def pull_request_logic(context):
     response = requests.get(url)
     json = response.json()
 
-    top_5 = json[0:1]
+    top_5 = json[0:5]
     new_pulls = []
 
     for i in top_5:
@@ -61,9 +63,39 @@ def new_pull_request(update, context):
 
     context.job_queue.run_repeating(pull_request_logic, interval = 300, first = 1, context=update.message.chat_id)
 
+def broadcast_pull_request(context):
+    url = "https://api.github.com/repos/indocom/pinus-telebot/pulls"
+    response = requests.get(url)
+    json = response.json()
+
+    top_5 = json[0:5]
+    new_pulls = []
+
+    for i in top_5:
+        create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        time_difference = (datetime.datetime.now() - create_time).total_seconds()
+        #28800 -> conversion from utc to gmt+8
+        # + 5 mins is 29100
+        print(time_difference)
+        if time_difference < 29100 :
+            new_pulls.append(i)
+        
+    reply_text = ("Hi, here is the list of new Pull Request for pinus-telebot: \n")
+    for i in new_pulls:
+        reply_text += ("- " + i["title"] + " : " + i["html_url"] + "\n")
+    
+    if len(new_pulls) > 0:
+        for i in chat_ids:
+            context.bot.send_message(chat_id=i, text=reply_text)
+    # else:
+    #     for i in chat_ids:
+    #         context.bot.send_message(chat_id=i, text="nothing to report")
 
 
 
+
+#job queues
+job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
