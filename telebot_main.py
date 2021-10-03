@@ -3,8 +3,9 @@ import logging
 import requests
 import datetime
 import os
+from csv_handler import *
 
-BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
+BOT_API_TOKEN = "2048540466:AAH1PkNgs-hup41sIhlayXv-OLGHNe7N9Tw"
 PORT = int(os.environ.get('PORT', 8443))
 
 #logging information
@@ -20,7 +21,7 @@ dispatcher = updater.dispatcher
 
 #List of all of our functions
 def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me, okay !!")
 
 def unknown(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
@@ -66,13 +67,30 @@ def new_pull_request(update, context):
     context.job_queue.run_repeating(pull_request_logic, interval = 300, first = 1, context=update.message.chat_id)
 
 
+def add_repo(update, context):
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+    try:
+        # args[0] should contain the time for the timer in seconds
+        new_github_url = context.args[0]
+        new_chat_id = str(update.message.chat_id)
+        new_owner_name = update.message.from_user.username
+        repo_data[length] = [new_chat_id, new_owner_name, new_github_url]
 
+        text = 'Successfully added new repo'
+        writeToCSV("repo_list.txt", repo_data)
+        update.message.reply_text(text + str(repo_data))
+
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /add_repo <repo_link>')
 
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
 repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
+add_repo_handler = CommandHandler('add_repo', add_repo)
+
 
 #List of Message Handlers
 unknown_handler = MessageHandler(Filters.command, unknown)
@@ -82,14 +100,16 @@ unknown_handler = MessageHandler(Filters.command, unknown)
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
+dispatcher.add_handler(add_repo_handler)
 
 dispatcher.add_handler(unknown_handler)
 
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")

@@ -1,0 +1,4 @@
+chat_id,owner_name,repo_url
+123,pokemon, pokemon.com
+1141961290,Cwd324,pokemon.com
+-551819519,Cwd324,pokemon.com
