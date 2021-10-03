@@ -3,7 +3,7 @@ import logging
 import requests
 import datetime
 
-chat_ids = [176037276]
+chat_ids = []
 
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -17,8 +17,12 @@ dispatcher = updater.dispatcher
 
 
 #List of all of our functions
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+def help_func(update, context):
+    text = ("Hi, here is a list of commands\n\n")
+    text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
+    text += ("/subscribe: Subscribe to Pinus-telebot Pull Requests Notification\n\n")
+    text += ("/status: Check whether you are subscribed or not")
+    context.bot.send_message(chat_id=update.effective_chat.id, text = text)
 
 def unknown(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
@@ -87,29 +91,47 @@ def broadcast_pull_request(context):
     if len(new_pulls) > 0:
         for i in chat_ids:
             context.bot.send_message(chat_id=i, text=reply_text)
-    # else:
-    #     for i in chat_ids:
-    #         context.bot.send_message(chat_id=i, text="nothing to report")
+    else:
+        for i in chat_ids:
+            context.bot.send_message(chat_id=i, text="nothing to report")
 
+def subscribe(update, context):
+    if(update.effective_chat.id in chat_ids):
+        chat_ids.remove(update.effective_chat.id)
+        reply_text = "Successfully Unubscribed"
+    else:
+        chat_ids.append(update.effective_chat.id)
+        reply_text = "Successfully Subscribed"   
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
+def status(update, context):
+    if(update.effective_chat.id in chat_ids):
+        reply_text = "Subscribed"
+    else:
+        reply_text = "Not Subscribed"   
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 
 #List of Command Handlers
-start_handler = CommandHandler('start', start)
+help_handler = CommandHandler('help', help_func)
 repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
+subscribe_handler = CommandHandler('subscribe', subscribe)
+status_handler = CommandHandler('status', status)
 
 #List of Message Handlers
 unknown_handler = MessageHandler(Filters.command, unknown)
 
 #Adding handlers to dispatcher
 #Order matters
-dispatcher.add_handler(start_handler)
+dispatcher.add_handler(help_handler)
 dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
+dispatcher.add_handler(subscribe_handler)
+dispatcher.add_handler(status_handler)
 
 dispatcher.add_handler(unknown_handler)
 
