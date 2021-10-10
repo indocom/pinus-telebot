@@ -1,11 +1,14 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext.callbackqueryhandler import CallbackQueryHandler
+from telegram.callbackquery import CallbackQuery
+from telegram import ReplyKeyboardMarkup
 import logging
 import requests
 import datetime
 import os
 from csv_handler import *
 
-BOT_API_TOKEN = "2048540466:AAH1PkNgs-hup41sIhlayXv-OLGHNe7N9Tw"
+BOT_API_TOKEN = ""
 PORT = int(os.environ.get('PORT', 8443))
 
 chat_ids = []
@@ -23,8 +26,18 @@ dispatcher = updater.dispatcher
 
 #List of all of our functions
 def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me, okay !!")
+    
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot, use /list to show list of available commands and /help to know informations about the bot")
 
+def list(update, context):
+    keyboard = keyboard = [['/subscribe', '/help'], ['/status', 'new_pull_request']]
+
+    reply_markup = ReplyKeyboardMarkup(keyboard,
+                                       one_time_keyboard=True,
+                                       resize_keyboard=True)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    
 def help_func(update, context):
     text = ("Hi, here is a list of commands\n\n")
     text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
@@ -140,6 +153,7 @@ job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, firs
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
+list_handler = CommandHandler('list', list)
 help_handler = CommandHandler('help', help_func)
 repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
@@ -154,6 +168,7 @@ unknown_handler = MessageHandler(Filters.command, unknown)
 #Adding handlers to dispatcher
 #Order matters
 dispatcher.add_handler(start_handler)
+dispatcher.add_handler(list_handler)
 dispatcher.add_handler(help_handler)
 dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
