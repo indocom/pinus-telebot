@@ -1,10 +1,14 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext.callbackqueryhandler import CallbackQueryHandler
+from telegram.callbackquery import CallbackQuery
+from telegram import ReplyKeyboardMarkup
 import logging
 import requests
 import datetime
 import os
+from csv_handler import *
 
-BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
+BOT_API_TOKEN = ""
 PORT = int(os.environ.get('PORT', 8443))
 
 chat_ids = []
@@ -21,6 +25,19 @@ dispatcher = updater.dispatcher
 
 
 #List of all of our functions
+def start(update, context):
+    
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot, use /list to show list of available commands and /help to know informations about the bot")
+
+def list(update, context):
+    keyboard = keyboard = [['/subscribe', '/help'], ['/status', 'new_pull_request']]
+
+    reply_markup = ReplyKeyboardMarkup(keyboard,
+                                       one_time_keyboard=True,
+                                       resize_keyboard=True)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    
 def help_func(update, context):
     text = ("Hi, here is a list of commands\n\n")
     text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
@@ -78,7 +95,6 @@ def broadcast_pull_request(context):
 
     top_5 = json[0:5]
     new_pulls = []
-
     for i in top_5:
         create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
         time_difference = (datetime.datetime.now() - create_time).total_seconds()
@@ -115,14 +131,34 @@ def status(update, context):
         reply_text = "Not Subscribed"   
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
+def add_repo(update, context):
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+    try:
+        # args[0] should contain the time for the timer in seconds
+        new_github_url = context.args[0]
+        new_chat_id = str(update.message.chat_id)
+        new_owner_name = update.message.from_user.username
+        repo_data[length] = [new_chat_id, new_owner_name, new_github_url]
+
+        text = 'Successfully added new repo'
+        writeToCSV("repo_list.txt", repo_data)
+        update.message.reply_text(text + str(repo_data))
+
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /add_repo <repo_link>')
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 
 #List of Command Handlers
+start_handler = CommandHandler('start', start)
+list_handler = CommandHandler('list', list)
 help_handler = CommandHandler('help', help_func)
 repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
+add_repo_handler = CommandHandler('add_repo', add_repo)
+
 subscribe_handler = CommandHandler('subscribe', subscribe)
 status_handler = CommandHandler('status', status)
 
@@ -131,19 +167,23 @@ unknown_handler = MessageHandler(Filters.command, unknown)
 
 #Adding handlers to dispatcher
 #Order matters
+dispatcher.add_handler(start_handler)
+dispatcher.add_handler(list_handler)
 dispatcher.add_handler(help_handler)
 dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
+dispatcher.add_handler(add_repo_handler)
 dispatcher.add_handler(subscribe_handler)
 dispatcher.add_handler(status_handler)
 
 dispatcher.add_handler(unknown_handler)
 
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
