@@ -196,15 +196,15 @@ def reminder(context):
     if __name__ == '__main__':
         main()
     f = open("events.txt", "r")
+    text = ''
     for i in f:
         startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
         minute = (startime - datetime.datetime.now()).total_seconds()/60
-        a = i
-        break
-    text = ''
-    if 59 <= minute < 61:
-        text = "Reminder: You have an event in 1 hour. \n"
-        text += a
+        if 59 <= minute < 61:
+            a = i
+            text = "Reminder: You have an event in 1 hour. \n"
+            text += a
+            break
     if len(text) > 2:
         context.bot.send_message(chat_id=context.job.context, text=text)
 
