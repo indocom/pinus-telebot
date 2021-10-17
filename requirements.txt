@@ -1,3 +1,5 @@
 python-telegram-bot==12.7
 requests
+googleapiclient
+google_auth_oauthlib
 
