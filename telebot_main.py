@@ -353,12 +353,12 @@ dispatcher.add_handler(remove_repo_handler)
 
 dispatcher.add_handler(unknown_handler)
 
-# updater.start_webhook(listen="0.0.0.0",
-#                           port=int(PORT),
-#                           url_path=BOT_API_TOKEN
-#                           )
-# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
-updater.start_polling()
-print("Server Bot is up and running !")
-updater.idle()
+updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=BOT_API_TOKEN
+                          )
+updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+# updater.start_polling()
+# print("Server Bot is up and running !")
+# updater.idle()
 print("Listening .... ")
