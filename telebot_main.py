@@ -14,7 +14,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from csv_handler import *
 
-BOT_API_TOKEN = ""
+BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
+GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN')
 PORT = int(os.environ.get('PORT', 8443))
 
 # chat_ids = []
@@ -56,14 +57,18 @@ def unknown(update, context):
 
 def repo_list(update, context):
     url = "https://api.github.com/users/indocom/repos"
-    response = requests.get(url)
-    json = response.json()
-
-    reply_text = ("Hi, here is the list of PINUS Repositories: \n")
-    for i in json:
-        reply_text += ("- " + i["name"] + " : " + i["svn_url"] + "\n")
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+    id = str(update.message.chat_id)
+    text = "Here is your list of repo registered in the bot: "
     
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
+    for key, value in repo_data.items():
+        if(value[0] != id):
+            continue
+        github_url = value[2]
+        text += github_url
+        text += "\n"
+    context.bot.send_message(chat_id=id, text=text)
 
 def new_pull_request(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
@@ -74,13 +79,15 @@ def new_pull_request(update, context):
     for key, value in repo_data.items():
         if(value[0] != id):
             continue
-
-        url = "https://api.github.com/repos/" + value[2][19:] + "/pulls"
-        print(url)
-        response = requests.get(url)
-        json = response.json()
-
-        print(json)
+        
+        github_url = value[2][19:]
+        url = "https://api.github.com/repos/" + github_url + "/pulls"
+        try:
+            response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
+            json = response.json()
+        except requests.exceptions.RequestException as e:
+            context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
+            
         top_5 = json[0:5]
         new_pulls = []
 
@@ -127,8 +134,11 @@ def broadcast_pull_request(context):
 
             url = "https://api.github.com/repos/" + value[2][19:] + "/pulls"
             print(url)
-            response = requests.get(url)
-            json = response.json()
+            try:
+                response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
+                json = response.json()
+            except requests.exceptions.RequestException as e:
+                context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
 
             top_5 = json[0:5]
             new_pulls = []
@@ -258,19 +268,60 @@ def status(update, context):
 def add_repo(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
+    
+            
     try:
         # args[0] should contain the time for the timer in seconds
         new_github_url = context.args[0]
         new_chat_id = str(update.message.chat_id)
-        new_owner_name = update.message.from_user.username
-        repo_data[length] = [new_chat_id, new_owner_name, new_github_url]
-
-        text = 'Successfully added new repo'
-        writeToCSV("repo_list.txt", repo_data)
-        update.message.reply_text(text + str(repo_data))
 
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /add_repo <repo_link>')
+
+    #Catch duplicate entries
+    dupes = False
+    id = str(update.message.chat_id)
+    text = ""
+    for key, value in repo_data.items():
+        if(value[0] == id and value[2] == new_github_url):
+            dupes = True
+            
+    if(dupes) :
+        update.message.reply_text("The repo has already been registered !")
+        return
+
+    new_owner_name = update.message.from_user.username
+    repo_data[length] = [new_chat_id, new_owner_name, new_github_url]
+
+    text = 'Successfully added new repo'
+    writeToCSV("repo_list.txt", repo_data)
+    update.message.reply_text(text + str(repo_data))
+
+def remove_repo(update, context):
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+    id = str(update.message.chat_id)
+    try:
+        # args[0] should contain the time for the timer in seconds
+        to_be_deleted_github_url = context.args[0]
+
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /remove_repo <repo_link>')
+        return
+    delete = False
+    new_repo_data = dict(repo_data)
+    for key, value in repo_data.items():
+        if(value[0] == id and value[2] == to_be_deleted_github_url):
+            delete = True
+            new_repo_data.pop(key)
+    print(new_repo_data)
+    writeToCSV('repo_list.txt', new_repo_data)        
+    print("kawaii")
+    print(to_be_deleted_github_url)
+    if(delete) : 
+        update.message.reply_text('Deleted Successfully !')
+    else :
+        update.message.reply_text('Repo not found')
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
@@ -282,6 +333,7 @@ help_handler = CommandHandler('help', help_func)
 repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
 add_repo_handler = CommandHandler('add_repo', add_repo)
+remove_repo_handler = CommandHandler('remove_repo', remove_repo)
 
 status_handler = CommandHandler('status', status)
 
@@ -297,6 +349,7 @@ dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
 dispatcher.add_handler(add_repo_handler)
 dispatcher.add_handler(status_handler)
+dispatcher.add_handler(remove_repo_handler)
 
 dispatcher.add_handler(unknown_handler)
 
