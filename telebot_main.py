@@ -17,7 +17,7 @@ from csv_handler import *
 BOT_API_TOKEN = ""
 PORT = int(os.environ.get('PORT', 8443))
 
-chat_ids = []
+# chat_ids = []
 
 #logging information
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -36,7 +36,7 @@ def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot, use /list to show list of available commands and /help to know informations about the bot")
 
 def list(update, context):
-    keyboard = keyboard = [['/subscribe', '/help'], ['/status', 'new_pull_request']]
+    keyboard = keyboard = [['/help'], ['/status', '/repo'], ['/new_pull_request']]
 
     reply_markup = ReplyKeyboardMarkup(keyboard,
                                        one_time_keyboard=True,
@@ -47,8 +47,8 @@ def list(update, context):
 def help_func(update, context):
     text = ("Hi, here is a list of commands\n\n")
     text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
-    text += ("/subscribe: Subscribe to Pinus-telebot Pull Requests Notification\n\n")
-    text += ("/status: Check whether you are subscribed or not")
+    text += ("/status: Get the list of all repositories that you have subscribed\n\n")
+    text += ("/add_repo <repo link>: Subscribe to a particular repo\n\n")
     context.bot.send_message(chat_id=update.effective_chat.id, text = text)
 
 def unknown(update, context):
@@ -65,70 +65,92 @@ def repo_list(update, context):
     
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
-def pull_request_logic(context):
-    url = "https://api.github.com/repos/indocom/pinus-telebot/pulls"
-    response = requests.get(url)
-    json = response.json()
-
-    top_5 = json[0:5]
-    new_pulls = []
-
-    for i in top_5:
-        create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-        time_difference = (datetime.datetime.now() - create_time).total_seconds()
-        #28800 -> conversion from utc to gmt+8
-        # + 5 mins is 29100
-        if time_difference < 29100 :
-            new_pulls.append(i)
-        
-    reply_text = ("Hi, here is the list of new Pull Request for pinus-telebot: \n")
-    for i in new_pulls:
-        reply_text += ("- " + i["title"] + " : " + i["html_url"] + "\n")
-    
-    if len(new_pulls) > 0:
-        context.bot.send_message(chat_id=context.job.context, text=reply_text)
-
 def new_pull_request(update, context):
-    text = "Giving you Pull Request updates of pinus-telebot every 5 minutes"
-    context.bot.send_message(chat_id=update.message.chat_id, text=text)
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+    id = str(update.message.chat_id)
 
-    context.job_queue.run_repeating(pull_request_logic, interval = 300, first = 1, context=update.message.chat_id)
+    text = ""
+    for key, value in repo_data.items():
+        if(value[0] != id):
+            continue
+
+        url = "https://api.github.com/repos/" + value[2][19:] + "/pulls"
+        print(url)
+        response = requests.get(url)
+        json = response.json()
+
+        print(json)
+        top_5 = json[0:5]
+        new_pulls = []
+
+        for i in top_5:
+            create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            time_difference = (datetime.datetime.now() - create_time).total_seconds()
+            #28800 -> conversion from utc to gmt+8
+            # + 5 mins is 29100
+            print(time_difference)
+            if time_difference < 29100 :
+                new_pulls.append(i)
+        
+        if(len(new_pulls) == 0):
+            continue
+        text += ("\nREPO NAME: " + value[2][19:] + '\n\n')
+        for i in new_pulls:
+            text += ("- " + i["title"] + " : " + i["html_url"] + "\n\n")
+    
+    if (len(text) > 0):
+        final_text = "Hi, here is the new Pull Requests:\n" + text
+
+    else:
+        final_text = "There is no new Pull Requests"
+    context.bot.send_message(chat_id=id, text=final_text)
+    
 
 def broadcast_pull_request(context):
-    url = "https://api.github.com/repos/indocom/pinus-telebot/pulls"
-    response = requests.get(url)
-    json = response.json()
-
-    top_5 = json[0:5]
-    new_pulls = []
-    for i in top_5:
-        create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-        time_difference = (datetime.datetime.now() - create_time).total_seconds()
-        #28800 -> conversion from utc to gmt+8
-        # + 5 mins is 29100
-        print(time_difference)
-        if time_difference < 29100 :
-            new_pulls.append(i)
-        
-    reply_text = ("Hi, here is the list of new Pull Request for pinus-telebot: \n")
-    for i in new_pulls:
-        reply_text += ("- " + i["title"] + " : " + i["html_url"] + "\n")
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
     
-    if len(new_pulls) > 0:
-        for i in chat_ids:
-            context.bot.send_message(chat_id=i, text=reply_text)
-    else:
-        for i in chat_ids:
-            context.bot.send_message(chat_id=i, text="nothing to report")
+    chat_ids = []
 
-def subscribe(update, context):
-    if(update.effective_chat.id in chat_ids):
-        chat_ids.remove(update.effective_chat.id)
-        reply_text = "Successfully Unubscribed"
-    else:
-        chat_ids.append(update.effective_chat.id)
-        reply_text = "Successfully Subscribed"   
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
+    for key, value in repo_data.items():
+        if(len(value) == 0):
+            continue
+        if(value[0] not in chat_ids):
+            chat_ids.append(value[0])
+    
+    for id in chat_ids:
+        text = ""
+        for key, value in repo_data.items():
+            if(value[0] != id):
+                continue
+
+            url = "https://api.github.com/repos/" + value[2][19:] + "/pulls"
+            print(url)
+            response = requests.get(url)
+            json = response.json()
+
+            top_5 = json[0:5]
+            new_pulls = []
+
+            for i in top_5:
+                create_time = datetime.datetime.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+                time_difference = (datetime.datetime.now() - create_time).total_seconds()
+                #28800 -> conversion from utc to gmt+8
+                # + 5 mins is 29100
+                print(time_difference)
+                if time_difference < 29100 :
+                    new_pulls.append(i)
+            
+            if(len(new_pulls) == 0):
+                continue
+            text += ("\nREPO NAME: " + value[2][19:] + '\n\n')
+            for i in new_pulls:
+                text += ("- " + i["title"] + " : " + i["html_url"] + "\n\n")
+        
+        if (len(text) > 0):
+            final_text = "Hi, here is the new Pull Requests:\n" + text
+            context.bot.send_message(chat_id=id, text=final_text)
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -216,11 +238,22 @@ remindme_handler = CommandHandler('remindme', remindme)
 dispatcher.add_handler(remindme_handler)
 
 def status(update, context):
-    if(update.effective_chat.id in chat_ids):
-        reply_text = "Subscribed"
+    repo_data = readCSVfromFile("repo_list.txt")
+    length = len(repo_data)
+
+    subscribed_repo = []
+    text = "Hi, here is the list of your subscribed repositories:\n"
+
+    for key, value in repo_data.items():
+        if(len(value) > 0 and value[0] == str(update.message.chat_id)):
+            subscribed_repo.append(value[2])
+
+    if(len(subscribed_repo) > 0):
+        for i in subscribed_repo:
+            text += "- " + i + "\n"
+        update.message.reply_text(text)
     else:
-        reply_text = "Not Subscribed"   
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
+        update.message.reply_text("You have not subscribed to any repositories. Use /help for more information")
 
 def add_repo(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
@@ -250,7 +283,6 @@ repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
 add_repo_handler = CommandHandler('add_repo', add_repo)
 
-subscribe_handler = CommandHandler('subscribe', subscribe)
 status_handler = CommandHandler('status', status)
 
 #List of Message Handlers
@@ -264,7 +296,6 @@ dispatcher.add_handler(help_handler)
 dispatcher.add_handler(repo_list_handler)
 dispatcher.add_handler(new_pull_request_handler)
 dispatcher.add_handler(add_repo_handler)
-dispatcher.add_handler(subscribe_handler)
 dispatcher.add_handler(status_handler)
 
 dispatcher.add_handler(unknown_handler)
