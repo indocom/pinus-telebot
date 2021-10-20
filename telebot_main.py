@@ -8,10 +8,10 @@ import requests
 import datetime
 import os
 import os.path
-# from googleapiclient.discovery import build
-# from google_auth_oauthlib.flow import InstalledAppFlow
-# from google.auth.transport.requests import Request
-# from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from csv_handler import *
 
 BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
@@ -165,87 +165,84 @@ def broadcast_pull_request(context):
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-# def main():
-#     """Shows basic usage of the Google Calendar API.
-#     Prints the start and name of the next 10 events on the user's calendar.
-#     """
-#     creds = None
-#     # The file token.json stores the user's access and refresh tokens, and is
-#     # created automatically when the authorization flow completes for the first
-#     # time.
-#     if os.path.exists('token.json'):
-#         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-#     # If there are no (valid) credentials available, let the user log in.
-#     if not creds or not creds.valid:
-#         if creds and creds.expired and creds.refresh_token:
-#             creds.refresh(Request())
-#         else:
-#             flow = InstalledAppFlow.from_client_secrets_file(
-#                 'credentials.json', SCOPES)
-#             creds = flow.run_local_server(port=0)
-#         # Save the credentials for the next run
-#         with open('token.json', 'w') as token:
-#             token.write(creds.to_json())
+def connectCalendar():
+    """Shows basic usage of the Google Calendar API.
+    Prints the start and name of the next 10 events on the user's calendar.
+    """
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
 
-#     service = build('calendar', 'v3', credentials=creds)
+    service = build('calendar', 'v3', credentials=creds)
 
-#     # Call the Calendar API
-#     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-#     print('Getting the upcoming 10 events:')
-#     f = open("events.txt", "w")
-#     events_result = service.events().list(calendarId='tech.pinusonline@gmail.com', timeMin=now,
-#                                         maxResults=10, singleEvents=True,
-#                                         orderBy='startTime').execute()
-#     events = events_result.get('items', [])
+    # Call the Calendar API
+    now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
+    print('Getting the upcoming 10 events:')
+    f = open("events.txt", "w")
+    events_result = service.events().list(calendarId='tech.pinusonline@gmail.com', timeMin=now,
+                                        maxResults=10, singleEvents=True,
+                                        orderBy='startTime').execute()
+    events = events_result.get('items', [])
 
-#     if not events:
-#         print('No upcoming events found.')
-#         f.write("No upcoming events found."+"\n")
-#     for event in events:
-#         timestart = event['start'].get('dateTime', event['start'].get('date'))
-#         print(timestart, event['summary'])
-#         f.write(timestart + event['summary'] +"\n")
-#     print()
-#     print('Telebot Events:')
-#     for event in events:
-#         timestart = event['start'].get('dateTime', event['start'].get('date'))
-#         if '[Telebot]' in event['summary']:
-#             print(timestart, event['summary'])
-#     f.close()
+    if not events:
+        print('No upcoming events found.')
+        f.write("No upcoming events found."+"\n")
+    for event in events:
+        timestart = event['start'].get('dateTime', event['start'].get('date'))
+        print(timestart, event['summary'])
+        f.write(timestart + event['summary'] +"\n")
+    print()
+    print('Telebot Events:')
+    for event in events:
+        timestart = event['start'].get('dateTime', event['start'].get('date'))
+        if '[Telebot]' in event['summary']:
+            print(timestart, event['summary'])
+    f.close()
 
-# def getevents(update, context):
-#     if __name__ == '__main__':
-#         main()
-#     f = open("events.txt", "r")
-#     reply_text = ("Getting the upcoming 10 events: \n")
-#     for i in f:
-#         reply_text += (i)
-#     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
-# getevents_handler = CommandHandler('getevents', getevents)
-# dispatcher.add_handler(getevents_handler)
+def getevents(update, context):
+    connectCalendar()
+    f = open("events.txt", "r")
+    reply_text = ("Getting the upcoming 10 events: \n")
+    for i in f:
+        reply_text += (i)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
-# def reminder(context):
-#     if __name__ == '__main__':
-#         main()
-#     f = open("events.txt", "r")
-#     text = ''
-#     for i in f:
-#         startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
-#         minute = (startime - datetime.datetime.now()).total_seconds()/60
-#         if 59 <= minute < 61:
-#             a = i
-#             text = "Reminder: You have an event in 1 hour. \n"
-#             text += a
-#             break
-#     if len(text) > 2:
-#         context.bot.send_message(chat_id=context.job.context, text=text)
 
-# def remindme(update, context):
-#     reply = 'Reminder is on.'
-#     context.bot.send_message(chat_id=update.message.chat_id, text=reply)
-#     context.job_queue.run_repeating(reminder, interval = 120, first = 1, context=update.message.chat_id)
-# remindme_handler = CommandHandler('remindme', remindme)
-# dispatcher.add_handler(remindme_handler)
+def reminder(context):
+    connectCalendar()
+    f = open("events.txt", "r")
+    text = ''
+    for i in f:
+        startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
+        minute = (startime - datetime.datetime.now()).total_seconds()/60
+        if 59 <= minute < 61:
+            a = i
+            text = "Reminder: You have an event in 1 hour. \n"
+            text += a
+            break
+    if len(text) > 2:
+        context.bot.send_message(chat_id=context.job.context, text=text)
+    print("Hallo")
+
+def remindme(update, context):
+    reply = 'Reminder is on.'
+    context.bot.send_message(chat_id=update.message.chat_id, text=reply)
+    context.job_queue.run_repeating(reminder, interval = 120, first = 1, context=update.message.chat_id)
+
 
 def status(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
@@ -269,7 +266,6 @@ def add_repo(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     
-            
     try:
         # args[0] should contain the time for the timer in seconds
         new_github_url = context.args[0]
@@ -294,7 +290,8 @@ def add_repo(update, context):
     repo_data[length] = [new_chat_id, new_owner_name, new_github_url]
 
     text = 'Successfully added new repo'
-    writeToCSV("repo_list.txt", repo_data)
+    fieldname = ['chat_id', 'owner_name', 'repo_url']
+    writeToCSV("repo_list.txt", repo_data, fieldname)
     update.message.reply_text(text + str(repo_data))
 
 def remove_repo(update, context):
@@ -315,7 +312,8 @@ def remove_repo(update, context):
             delete = True
             new_repo_data.pop(key)
     print(new_repo_data)
-    writeToCSV('repo_list.txt', new_repo_data)        
+    fieldname = ['chat_id', 'owner_name', 'repo_url']
+    writeToCSV('repo_list.txt', new_repo_data, fieldname)        
     print("kawaii")
     print(to_be_deleted_github_url)
     if(delete) : 
@@ -334,6 +332,9 @@ repo_list_handler = CommandHandler('repo', repo_list)
 new_pull_request_handler = CommandHandler('new_pull_request', new_pull_request)
 add_repo_handler = CommandHandler('add_repo', add_repo)
 remove_repo_handler = CommandHandler('remove_repo', remove_repo)
+getevents_handler = CommandHandler('getevents', getevents)
+remindme_handler = CommandHandler('remindme', remindme)
+
 
 status_handler = CommandHandler('status', status)
 
@@ -350,15 +351,16 @@ dispatcher.add_handler(new_pull_request_handler)
 dispatcher.add_handler(add_repo_handler)
 dispatcher.add_handler(status_handler)
 dispatcher.add_handler(remove_repo_handler)
-
+dispatcher.add_handler(getevents_handler)
+dispatcher.add_handler(remindme_handler)
 dispatcher.add_handler(unknown_handler)
 
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
-# updater.start_polling()
-# print("Server Bot is up and running !")
-# updater.idle()
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+updater.start_polling()
+print("Server Bot is up and running !")
+updater.idle()
 print("Listening .... ")
