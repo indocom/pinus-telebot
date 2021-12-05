@@ -4,3 +4,4 @@ chat_id,owner_name,repo_url
 176037276,Albertsutz,https://github.com/indocom/pinus-telebot
 176037276,Albertsutz,https://github.com/indocom/pinus-client
 1141961290,Cwd324,https://github.com/indocom/pinus-telebot
+1141961290,Cwd324,http://github.com/indocom/pinus-client

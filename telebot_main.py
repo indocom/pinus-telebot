@@ -8,14 +8,16 @@ import requests
 import datetime
 import os
 import os.path
+import dropbox
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from csv_handler import *
 
-BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
-GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN')
+BOT_API_TOKEN = ''
+GITHUB_API_TOKEN = ''
+DROPBOX_TOKEN = ''
 PORT = int(os.environ.get('PORT', 8443))
 
 # chat_ids = []
@@ -29,12 +31,30 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 #Initialize updator and dispatcher
 updater = Updater(token= BOT_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
+def retrieve_data_dropbox():
+    dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+    for entry in dbx.files_list_folder('').entries:
+        print(entry.name)
+    filename = '/repo_list.txt'
+    local_data_path = 'repo_list.txt'
+    # f, r = dbx.files_download_to_file(local_data_path, filename)
+    # print(r.content)
+    with open("repo_list.txt", "wb") as f:
+        metadata, res = dbx.files_download(path="/repo_list.txt")
+        f.write(res.content)
+    return dbx
 
+def upload_file(token, file_from, file_to):
+        print(token)
+        dbx = dropbox.Dropbox(token)
+        
+        with open(file_from, 'rb') as f:
+            dbx.files_upload(f.read(), file_to)
 
 #List of all of our functions
 def start(update, context):
-    
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot, use /list to show list of available commands and /help to know informations about the bot")
+    retrieve_data_dropbox()
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot HEHE, use /list to show list of available commands and /help to know informations about the bot")
 
 def list(update, context):
     keyboard = keyboard = [['/help'], ['/status', '/repo'], ['/new_pull_request']]
@@ -139,7 +159,6 @@ def broadcast_pull_request(context):
                 json = response.json()
             except requests.exceptions.RequestException as e:
                 context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
-
             top_5 = json[0:5]
             new_pulls = []
 
@@ -245,6 +264,7 @@ def remindme(update, context):
 
 
 def status(update, context):
+    retrieve_data_dropbox()
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
 
@@ -263,6 +283,7 @@ def status(update, context):
         update.message.reply_text("You have not subscribed to any repositories. Use /help for more information")
 
 def add_repo(update, context):
+    dbx = retrieve_data_dropbox()
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     
@@ -292,9 +313,12 @@ def add_repo(update, context):
     text = 'Successfully added new repo'
     fieldname = ['chat_id', 'owner_name', 'repo_url']
     writeToCSV("repo_list.txt", repo_data, fieldname)
+    with open("repo_list.txt",  "rb") as f:
+        dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
     update.message.reply_text(text + str(repo_data))
 
 def remove_repo(update, context):
+    dbx = retrieve_data_dropbox()
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     id = str(update.message.chat_id)
@@ -313,7 +337,9 @@ def remove_repo(update, context):
             new_repo_data.pop(key)
     print(new_repo_data)
     fieldname = ['chat_id', 'owner_name', 'repo_url']
-    writeToCSV('repo_list.txt', new_repo_data, fieldname)        
+    writeToCSV('repo_list.txt', new_repo_data, fieldname)  
+    with open("repo_list.txt",  "rb") as f:
+        dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
     print("kawaii")
     print(to_be_deleted_github_url)
     if(delete) : 
