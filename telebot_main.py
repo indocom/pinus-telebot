@@ -16,9 +16,9 @@ from google.oauth2.credentials import Credentials
 from csv_handler import *
 
 
-BOT_API_TOKEN = ''
-GITHUB_API_TOKEN = ''
-DROPBOX_TOKEN = ''
+BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
+GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN')
+DROPBOX_TOKEN = os.environ.get('DROPBOX_API_TOKEN')
 
 PORT = int(os.environ.get('PORT', 8443))
 
@@ -486,12 +486,11 @@ dispatcher.add_handler(remindme_handler)
 dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
-# updater.start_webhook(listen="0.0.0.0",
-#                           port=int(PORT),
-#                           url_path=BOT_API_TOKEN
-#                           )
-# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
-updater.start_polling()
+updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=BOT_API_TOKEN
+                          )
+updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
