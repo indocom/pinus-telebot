@@ -15,9 +15,11 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from csv_handler import *
 
+
 BOT_API_TOKEN = ''
 GITHUB_API_TOKEN = ''
 DROPBOX_TOKEN = ''
+
 PORT = int(os.environ.get('PORT', 8443))
 
 # chat_ids = []
@@ -29,7 +31,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 #Starting our bot
 #Initialize updator and dispatcher
-updater = Updater(token= BOT_API_TOKEN, use_context=True)
+updater = Updater(token=BOT_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 def retrieve_data_dropbox():
     dbx = dropbox.Dropbox(DROPBOX_TOKEN)
@@ -56,8 +58,9 @@ def start(update, context):
     retrieve_data_dropbox()
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot HEHE, use /list to show list of available commands and /help to know informations about the bot")
 
+
 def list(update, context):
-    keyboard = keyboard = [['/help'], ['/status', '/repo'], ['/new_pull_request']]
+    keyboard = keyboard = [['/help'], ['/status', '/repo'], ['/new_pull_request'], ['/getevents', '/addevent','/remindme']]
 
     reply_markup = ReplyKeyboardMarkup(keyboard,
                                        one_time_keyboard=True,
@@ -70,6 +73,9 @@ def help_func(update, context):
     text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
     text += ("/status: Get the list of all repositories that you have subscribed\n\n")
     text += ("/add_repo <repo link>: Subscribe to a particular repo\n\n")
+    text += ("/getevents: Get the upcoming 10 events\n\n")
+    text += ("/addevent: Add an event\n\n")
+    text += ("/remindme: Remind me for events with specific keyword\n\n")
     context.bot.send_message(chat_id=update.effective_chat.id, text = text)
 
 def unknown(update, context):
@@ -224,12 +230,6 @@ def connectCalendar():
         timestart = event['start'].get('dateTime', event['start'].get('date'))
         print(timestart, event['summary'])
         f.write(timestart + event['summary'] +"\n")
-    print()
-    print('Telebot Events:')
-    for event in events:
-        timestart = event['start'].get('dateTime', event['start'].get('date'))
-        if '[Telebot]' in event['summary']:
-            print(timestart, event['summary'])
     f.close()
 
 def getevents(update, context):
@@ -257,11 +257,114 @@ def reminder(context):
         context.bot.send_message(chat_id=context.job.context, text=text)
     print("Hallo")
 
+    eventsub = readCSVfromFile("events_subscription.txt")
+    length = len(eventsub)
+    chat_ids = []
+    for key, value in eventsub.items():
+        if(len(value) == 0):
+            continue
+        if(value[0] not in chat_ids):
+            chat_ids.append(value[0])
+    for id in chat_ids:
+        text = ''
+        for key, value in eventsub.items():
+            if(value[0] != id):
+                continue
+            for i in f:
+                startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
+                minute = (startime - datetime.datetime.now()).total_seconds()/60
+                if 59 <= minute < 61 and value[1] in i.lower():
+                    text = "Reminder: You have an event in 1 hour. \n"
+                    text += i
+        if len(text) > 1:
+            context.bot.send_message(chat_id=id, text=text)
+
+
 def remindme(update, context):
-    reply = 'Reminder is on.'
+    try:
+        keyword = context.args[0].lower()
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /remindme <event keyword>')
+        update.message.reply_text('ex: /remindme telebot')
+    eventsub = readCSVfromFile("events_subscription.txt")
+    length = len(eventsub)
+    #Catch duplicate entries
+    dupes = False
+    id = str(update.message.chat_id)
+    for key, value in eventsub.items():
+        if(value[0] == id and value[1] == keyword):
+            dupes = True
+    if(dupes) :
+        text = 'You will be reminded for events with keyword: '+keyword
+        update.message.reply_text(text)
+        return
+    eventsub[length] = [id,keyword]
+    fieldname = ['id', 'keyword']
+    writeToCSV("events_subscription.txt", eventsub, fieldname)
+    reply = 'Reminder is on for events with keyword: '+keyword
     context.bot.send_message(chat_id=update.message.chat_id, text=reply)
     context.job_queue.run_repeating(reminder, interval = 120, first = 1, context=update.message.chat_id)
 
+
+
+def addevent(update, context):
+    try:
+        eventname = context.args[0]
+        eventdate = context.args[1]
+        eventtime = context.args[2]+":00"
+        checkdate = datetime.datetime.strptime(context.args[1], "%Y-%m-%d")
+        checktime = datetime.datetime.strptime(eventtime, "%H:%M:%S")
+        eventdesc = context.args[3]
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /addevent <name> <date> <time> <desc>')
+        update.message.reply_text('ex: /addevent Meeting 2021-09-28 15:30 Pinus')
+    starttime = eventdate+"T"+eventtime
+    endtime = datetime.datetime.strptime(starttime, "%Y-%m-%dT%H:%M:%S")+datetime.timedelta(hours = 1)
+    endtime = endtime.strftime("%Y-%m-%dT%H:%M:%S")
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    service = build('calendar', 'v3', credentials=creds)
+    # Call the Calendar API
+    event = {
+    'summary': eventname,
+    'description': eventdesc,
+    'start': {
+      'dateTime': starttime,
+     'timeZone': '+08:00',
+    },
+    'end': {
+      'dateTime': endtime,
+      'timeZone': '+08:00',
+     },
+     #'recurrence': [
+     # 'RRULE:FREQ=DAILY;COUNT=2'
+     #],
+     'reminders': {
+     'useDefault': False,
+      'overrides': [
+        {'method': 'email', 'minutes': 24 * 60},
+         {'method': 'popup', 'minutes': 10},
+       ],
+     },
+    }
+    event = service.events().insert(calendarId='tech.pinusonline@gmail.com', body=event).execute()
+    print('Event created: %s' % (event.get('htmlLink')))
+    update.message.reply_text('Event created: %s' % (event.get('htmlLink')))
 
 def status(update, context):
     retrieve_data_dropbox()
@@ -313,6 +416,7 @@ def add_repo(update, context):
     text = 'Successfully added new repo'
     fieldname = ['chat_id', 'owner_name', 'repo_url']
     writeToCSV("repo_list.txt", repo_data, fieldname)
+
     with open("repo_list.txt",  "rb") as f:
         dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
     update.message.reply_text(text + str(repo_data))
@@ -340,8 +444,6 @@ def remove_repo(update, context):
     writeToCSV('repo_list.txt', new_repo_data, fieldname)  
     with open("repo_list.txt",  "rb") as f:
         dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
-    print("kawaii")
-    print(to_be_deleted_github_url)
     if(delete) : 
         update.message.reply_text('Deleted Successfully !')
     else :
@@ -349,6 +451,7 @@ def remove_repo(update, context):
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
+job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
@@ -360,6 +463,7 @@ add_repo_handler = CommandHandler('add_repo', add_repo)
 remove_repo_handler = CommandHandler('remove_repo', remove_repo)
 getevents_handler = CommandHandler('getevents', getevents)
 remindme_handler = CommandHandler('remindme', remindme)
+addevent_handler = CommandHandler('addevent', addevent)
 
 
 status_handler = CommandHandler('status', status)
@@ -379,6 +483,7 @@ dispatcher.add_handler(status_handler)
 dispatcher.add_handler(remove_repo_handler)
 dispatcher.add_handler(getevents_handler)
 dispatcher.add_handler(remindme_handler)
+dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
 # updater.start_webhook(listen="0.0.0.0",
