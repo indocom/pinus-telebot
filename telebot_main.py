@@ -111,13 +111,14 @@ def new_pull_request(update, context):
         
         github_url = value[2][19:]
         url = "https://api.github.com/repos/" + github_url + "/pulls"
+        print("Kawaii")
         try:
             response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
             json = response.json()
         except requests.exceptions.RequestException as e:
             context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
-            
         top_5 = json[0:5]
+        
         new_pulls = []
 
         for i in top_5:
@@ -163,12 +164,14 @@ def broadcast_pull_request(context):
             
             flag = value[2].find("github.com/") + 11
             url = "https://api.github.com/repos/" + value[2][flag:] + "/pulls"
+            print(url)
             try:
                 response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
                 json = response.json()
             except requests.exceptions.RequestException as e:
                 context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
             top_5 = json[0:5]
+            
             new_pulls = []
 
             for i in top_5:
@@ -440,7 +443,7 @@ def remove_repo(update, context):
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
-job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
+# job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
