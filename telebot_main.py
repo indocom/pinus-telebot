@@ -198,8 +198,8 @@ def connectCalendar():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    credentials_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    credentials_json = credentials_json.decode("utf-8")
+    credentials = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+    credentials_json = json.loads(credentials)
     creds = GoogleCredentials.from_json(credentials_json)
     # If there are no (valid) credentials available, let the user log in.
     service = build('calendar', 'v3', credentials=creds)
