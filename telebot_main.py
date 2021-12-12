@@ -200,6 +200,8 @@ def connectCalendar():
     # created automatically when the authorization flow completes for the first
     # time.
     credentials = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+    print("Kawaii")
+    print(credentials)
     credentials_json = json.loads(credentials)
     creds = GoogleCredentials.from_json(credentials_json)
     # If there are no (valid) credentials available, let the user log in.
