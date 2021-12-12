@@ -266,7 +266,7 @@ def reminder(context):
             for i in f:
                 startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
                 minute = (startime - datetime.datetime.now()).total_seconds()/60
-                if value[1].lower() in i.lower() and minute < 61:
+                if value[1].lower() in i.lower() and 0 < minute < 61:
                     text = "Reminder: You have an event in 1 hour. \n"
                     text += i
         if len(text) > 1:
