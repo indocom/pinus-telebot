@@ -1,5 +1,4 @@
 chat_id,owner_name,repo_url
-176037276,Albertsutz,https://github.com/indocom/gapura
 176037276,Albertsutz,https://github.com/indocom/lumina
 176037276,Albertsutz,https://github.com/indocom/pinus-telebot
 176037276,Albertsutz,https://github.com/indocom/pinus-client

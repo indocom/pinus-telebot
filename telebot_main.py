@@ -14,11 +14,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from csv_handler import *
+from dotenv import load_dotenv
 
-
-BOT_API_TOKEN = ''
-GITHUB_API_TOKEN = ''
-DROPBOX_TOKEN = ''
+load_dotenv()
+BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
+GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN')
+DROPBOX_API_TOKEN = os.environ.get('DROPBOX_API_TOKEN')
 
 PORT = int(os.environ.get('PORT', 8443))
 
@@ -33,21 +34,23 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 #Initialize updator and dispatcher
 updater = Updater(token=BOT_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
-def retrieve_data_dropbox():
-    dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+def connect_dropbox():
+    dbx = dropbox.Dropbox(DROPBOX_API_TOKEN)
     for entry in dbx.files_list_folder('').entries:
         print(entry.name)
     filename = '/repo_list.txt'
     local_data_path = 'repo_list.txt'
-    # f, r = dbx.files_download_to_file(local_data_path, filename)
-    # print(r.content)
     with open("repo_list.txt", "wb") as f:
         metadata, res = dbx.files_download(path="/repo_list.txt")
         f.write(res.content)
     return dbx
 
+def download_from_dropbox(dbx, dbx_file_path, local_data_path):
+    with open(local_data_path, "wb") as f:
+        metadata, res = dbx.files_download(path=dbx_file_path)
+        f.write(res.content)
+
 def upload_file(token, file_from, file_to):
-        print(token)
         dbx = dropbox.Dropbox(token)
         
         with open(file_from, 'rb') as f:
@@ -55,8 +58,8 @@ def upload_file(token, file_from, file_to):
 
 #List of all of our functions
 def start(update, context):
-    retrieve_data_dropbox()
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm KawaiiBot HEHE, use /list to show list of available commands and /help to know informations about the bot")
+    START_MESSAGE = "Welcome to PINTech bot, use /list to show list of available commands and /help to know more informations about the bot"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=START_MESSAGE)
 
 
 def list(update, context):
@@ -83,18 +86,17 @@ def unknown(update, context):
 
 def repo_list(update, context):
     url = "https://api.github.com/users/indocom/repos"
-    repo_data = readCSVfromFile("repo_list.txt")
-    length = len(repo_data)
-    id = str(update.message.chat_id)
-    text = "Here is your list of repo registered in the bot: "
+    try:
+        response = requests.get(url, auth=('user', GITHUB_API_TOKEN))
+        json = response.json()
+    except requests.exceptions.RequestException as e:
+        context.bot.send_message(chat_id = id, text = "An error occured, Pull request may be Incomplete")
     
-    for key, value in repo_data.items():
-        if(value[0] != id):
-            continue
-        github_url = value[2]
-        text += github_url
-        text += "\n"
-    context.bot.send_message(chat_id=id, text=text)
+    reply_text = ("Hi, here is the list of PINUS Repositories: \n")
+    for i in json:
+        reply_text += ("- " + i["name"] + " : " + i["svn_url"] + "\n")
+    
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
 def new_pull_request(update, context):
     repo_data = readCSVfromFile("repo_list.txt")
@@ -157,9 +159,9 @@ def broadcast_pull_request(context):
         for key, value in repo_data.items():
             if(value[0] != id):
                 continue
-
-            url = "https://api.github.com/repos/" + value[2][19:] + "/pulls"
-            print(url)
+            
+            flag = value[2].find("github.com/") + 11
+            url = "https://api.github.com/repos/" + value[2][flag:] + "/pulls"
             try:
                 response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
                 json = response.json()
@@ -198,20 +200,9 @@ def connectCalendar():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if os.path.exists('google-credentials.json'):
+        creds = Credentials.from_authorized_user_file('google-credentials.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
     service = build('calendar', 'v3', credentials=creds)
 
     # Call the Calendar API
@@ -227,6 +218,8 @@ def connectCalendar():
         print('No upcoming events found.')
         f.write("No upcoming events found."+"\n")
     for event in events:
+        if "[" not in event['summary'] and "]" not in event['summary']:
+            continue
         timestart = event['start'].get('dateTime', event['start'].get('date'))
         print(timestart, event['summary'])
         f.write(timestart + event['summary'] +"\n")
@@ -243,19 +236,18 @@ def getevents(update, context):
 
 def reminder(context):
     connectCalendar()
-    f = open("events.txt", "r")
+    
     text = ''
-    for i in f:
-        startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
-        minute = (startime - datetime.datetime.now()).total_seconds()/60
-        if 59 <= minute < 61:
-            a = i
-            text = "Reminder: You have an event in 1 hour. \n"
-            text += a
-            break
-    if len(text) > 2:
-        context.bot.send_message(chat_id=context.job.context, text=text)
-    print("Hallo")
+    # for i in f:
+    #     startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
+    #     minute = (startime - datetime.datetime.now()).total_seconds()/60
+    #     if 59 <= minute < 61:
+    #         a = i
+    #         text = "Reminder: You have an event in 1 hour. \n"
+    #         text += a
+    #         break
+    # if len(text) > 2:
+    #     context.bot.send_message(chat_id=context.job.context, text=text)
 
     eventsub = readCSVfromFile("events_subscription.txt")
     length = len(eventsub)
@@ -265,19 +257,20 @@ def reminder(context):
             continue
         if(value[0] not in chat_ids):
             chat_ids.append(value[0])
-    for id in chat_ids:
+    for o in chat_ids:
         text = ''
+        f = open("events.txt", "r")
         for key, value in eventsub.items():
-            if(value[0] != id):
+            if(value[0] != o):
                 continue
             for i in f:
                 startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
                 minute = (startime - datetime.datetime.now()).total_seconds()/60
-                if 59 <= minute < 61 and value[1] in i.lower():
+                if value[1].lower() in i.lower() and 0 < minute < 61:
                     text = "Reminder: You have an event in 1 hour. \n"
                     text += i
         if len(text) > 1:
-            context.bot.send_message(chat_id=id, text=text)
+            context.bot.send_message(chat_id=o, text=text)
 
 
 def remindme(update, context):
@@ -295,7 +288,7 @@ def remindme(update, context):
         if(value[0] == id and value[1] == keyword):
             dupes = True
     if(dupes) :
-        text = 'You will be reminded for events with keyword: '+keyword
+        text = 'You have been subscribed for events with keyword: '+keyword
         update.message.reply_text(text)
         return
     eventsub[length] = [id,keyword]
@@ -303,7 +296,6 @@ def remindme(update, context):
     writeToCSV("events_subscription.txt", eventsub, fieldname)
     reply = 'Reminder is on for events with keyword: '+keyword
     context.bot.send_message(chat_id=update.message.chat_id, text=reply)
-    context.job_queue.run_repeating(reminder, interval = 120, first = 1, context=update.message.chat_id)
 
 
 
@@ -314,7 +306,7 @@ def addevent(update, context):
         eventtime = context.args[2]+":00"
         checkdate = datetime.datetime.strptime(context.args[1], "%Y-%m-%d")
         checktime = datetime.datetime.strptime(eventtime, "%H:%M:%S")
-        eventdesc = context.args[3]
+        eventdesc = ' '.join(x for x in context.args[3:])
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /addevent <name> <date> <time> <desc>')
         update.message.reply_text('ex: /addevent Meeting 2021-09-28 15:30 Pinus')
@@ -325,19 +317,10 @@ def addevent(update, context):
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    credentials_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+    creds = GoogleCredentials.from_json(credentials_json)
     # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+    
     service = build('calendar', 'v3', credentials=creds)
     # Call the Calendar API
     event = {
@@ -367,7 +350,8 @@ def addevent(update, context):
     update.message.reply_text('Event created: %s' % (event.get('htmlLink')))
 
 def status(update, context):
-    retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
 
@@ -386,7 +370,8 @@ def status(update, context):
         update.message.reply_text("You have not subscribed to any repositories. Use /help for more information")
 
 def add_repo(update, context):
-    dbx = retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     
@@ -422,7 +407,8 @@ def add_repo(update, context):
     update.message.reply_text(text + str(repo_data))
 
 def remove_repo(update, context):
-    dbx = retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     id = str(update.message.chat_id)
@@ -439,7 +425,6 @@ def remove_repo(update, context):
         if(value[0] == id and value[2] == to_be_deleted_github_url):
             delete = True
             new_repo_data.pop(key)
-    print(new_repo_data)
     fieldname = ['chat_id', 'owner_name', 'repo_url']
     writeToCSV('repo_list.txt', new_repo_data, fieldname)  
     with open("repo_list.txt",  "rb") as f:
@@ -450,7 +435,7 @@ def remove_repo(update, context):
         update.message.reply_text('Repo not found')
 
 #job queues
-job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
+#job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
@@ -464,8 +449,6 @@ remove_repo_handler = CommandHandler('remove_repo', remove_repo)
 getevents_handler = CommandHandler('getevents', getevents)
 remindme_handler = CommandHandler('remindme', remindme)
 addevent_handler = CommandHandler('addevent', addevent)
-
-
 status_handler = CommandHandler('status', status)
 
 #List of Message Handlers
@@ -486,11 +469,14 @@ dispatcher.add_handler(remindme_handler)
 dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
+#WebHook to be used when deploying the bot
 # updater.start_webhook(listen="0.0.0.0",
 #                           port=int(PORT),
 #                           url_path=BOT_API_TOKEN
 #                           )
 # updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+
+#This is to start testing
 updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
