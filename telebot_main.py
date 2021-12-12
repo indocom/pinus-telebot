@@ -213,7 +213,6 @@ def connectCalendar():
                                         maxResults=10, singleEvents=True,
                                         orderBy='startTime').execute()
     events = events_result.get('items', [])
-
     if not events:
         print('No upcoming events found.')
         f.write("No upcoming events found."+"\n")
@@ -274,6 +273,8 @@ def reminder(context):
 
 
 def remindme(update, context):
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx,"/events_subscription.txt", "events_subscription.txt")
     try:
         keyword = context.args[0].lower()
     except (IndexError, ValueError):
@@ -294,6 +295,8 @@ def remindme(update, context):
     eventsub[length] = [id,keyword]
     fieldname = ['id', 'keyword']
     writeToCSV("events_subscription.txt", eventsub, fieldname)
+    with open("events_subscription.txt",  "rb") as f:
+        dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
     reply = 'Reminder is on for events with keyword: '+keyword
     context.bot.send_message(chat_id=update.message.chat_id, text=reply)
 
