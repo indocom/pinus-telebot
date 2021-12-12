@@ -8,6 +8,7 @@ Steps to set-up development:
    1. BOT_API_TOKEN='Fill with Token'
    2. DROPBOX_API_TOKEN='Fill With Token'
    3. GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json
+   4. DEPLOY_URL=https://pinus-telegram-bot.herokuapp.com/
 
 
 Deployment:
