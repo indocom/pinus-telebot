@@ -146,7 +146,7 @@ def new_pull_request(update, context):
 def broadcast_pull_request(context):
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
-    
+    print("Broadcasting Job running !")
     chat_ids = []
 
     for key, value in repo_data.items():
