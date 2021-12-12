@@ -8,4 +8,11 @@ Steps to set-up development:
    1. BOT_API_TOKEN='Fill with Token'
    2. DROPBOX_API_TOKEN='Fill With Token'
    3. GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json
-5. 
+
+
+Deployment:
+1.Heroku create on CLI
+1.Add the following 2 buildpacks on Heroku: 
+    1.https://github.com/gerywahyunugraha/heroku-google-application-credentials-buildpack
+    1.https://github.com/heroku/heroku-buildpack-python
+2.Set up the config variables (BOT_API_TOKEN, DROPBOX_API_TOKEN, and GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json, and GOOGLE_CREDENTIALS='Fill with JSON Content of google API Credentials Token')
