@@ -14,8 +14,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from csv_handler import *
+from dotenv import load_dotenv
 
-
+load_dotenv()
 BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN')
 DROPBOX_API_TOKEN = os.environ.get('DROPBOX_API_TOKEN')
@@ -33,7 +34,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 #Initialize updator and dispatcher
 updater = Updater(token=BOT_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
-def retrieve_data_dropbox():
+def connect_dropbox():
     dbx = dropbox.Dropbox(DROPBOX_API_TOKEN)
     for entry in dbx.files_list_folder('').entries:
         print(entry.name)
@@ -44,8 +45,12 @@ def retrieve_data_dropbox():
         f.write(res.content)
     return dbx
 
+def download_from_dropbox(dbx, dbx_file_path, local_data_path):
+    with open(local_data_path, "wb") as f:
+        metadata, res = dbx.files_download(path=dbx_file_path)
+        f.write(res.content)
+
 def upload_file(token, file_from, file_to):
-        print(token)
         dbx = dropbox.Dropbox(token)
         
         with open(file_from, 'rb') as f:
@@ -53,7 +58,6 @@ def upload_file(token, file_from, file_to):
 
 #List of all of our functions
 def start(update, context):
-    retrieve_data_dropbox()
     START_MESSAGE = "Welcome to PINTech bot, use /list to show list of available commands and /help to know more informations about the bot"
     context.bot.send_message(chat_id=update.effective_chat.id, text=START_MESSAGE)
 
@@ -158,7 +162,6 @@ def broadcast_pull_request(context):
             
             flag = value[2].find("github.com/") + 11
             url = "https://api.github.com/repos/" + value[2][flag:] + "/pulls"
-            print(url)
             try:
                 response = requests.get(url, auth=('user',GITHUB_API_TOKEN))
                 json = response.json()
@@ -256,7 +259,6 @@ def reminder(context):
             chat_ids.append(value[0])
     for o in chat_ids:
         text = ''
-        print(o)
         f = open("events.txt", "r")
         for key, value in eventsub.items():
             if(value[0] != o):
@@ -264,11 +266,7 @@ def reminder(context):
             for i in f:
                 startime = datetime.datetime.strptime(i[0:19], "%Y-%m-%dT%H:%M:%S")
                 minute = (startime - datetime.datetime.now()).total_seconds()/60
-                print(value[1].lower())
-                print(i.lower())
-                
-                if value[1].lower() in i.lower():
-                    print("HALO")
+                if value[1].lower() in i.lower() and minute < 61:
                     text = "Reminder: You have an event in 1 hour. \n"
                     text += i
         if len(text) > 1:
@@ -352,7 +350,8 @@ def addevent(update, context):
     update.message.reply_text('Event created: %s' % (event.get('htmlLink')))
 
 def status(update, context):
-    retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
 
@@ -371,7 +370,8 @@ def status(update, context):
         update.message.reply_text("You have not subscribed to any repositories. Use /help for more information")
 
 def add_repo(update, context):
-    dbx = retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     
@@ -407,7 +407,8 @@ def add_repo(update, context):
     update.message.reply_text(text + str(repo_data))
 
 def remove_repo(update, context):
-    dbx = retrieve_data_dropbox()
+    dbx = connect_dropbox()
+    download_from_dropbox(dbx, "/repo_list.txt", "repo_list.txt")
     repo_data = readCSVfromFile("repo_list.txt")
     length = len(repo_data)
     id = str(update.message.chat_id)
@@ -424,7 +425,6 @@ def remove_repo(update, context):
         if(value[0] == id and value[2] == to_be_deleted_github_url):
             delete = True
             new_repo_data.pop(key)
-    print(new_repo_data)
     fieldname = ['chat_id', 'owner_name', 'repo_url']
     writeToCSV('repo_list.txt', new_repo_data, fieldname)  
     with open("repo_list.txt",  "rb") as f:
@@ -435,7 +435,7 @@ def remove_repo(update, context):
         update.message.reply_text('Repo not found')
 
 #job queues
-job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
+#job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
@@ -470,14 +470,14 @@ dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
 #WebHook to be used when deploying the bot
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook('https://enigmatic-sands-16778.herokuapp.com/' + BOT_API_TOKEN)
 
 #This is to start testing
-# updater.start_polling()
+updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
