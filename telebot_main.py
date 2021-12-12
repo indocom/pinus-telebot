@@ -438,7 +438,7 @@ def remove_repo(update, context):
         update.message.reply_text('Repo not found')
 
 #job queues
-#job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
+job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
 job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
