@@ -13,6 +13,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from oauth2.client import GoogleCredentials
 from csv_handler import *
 
 
@@ -198,7 +199,7 @@ def connectCalendar():
     # created automatically when the authorization flow completes for the first
     # time.
     credentials_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    creds = Credentials.from_json(credentials_json)
+    creds = GoogleCredentials.from_json(credentials_json)
     # If there are no (valid) credentials available, let the user log in.
     service = build('calendar', 'v3', credentials=creds)
 
@@ -320,7 +321,7 @@ def addevent(update, context):
     # created automatically when the authorization flow completes for the first
     # time.
     credentials_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    creds = Credentials.from_json(credentials_json)
+    creds = GoogleCredentials.from_json(credentials_json)
     # If there are no (valid) credentials available, let the user log in.
     
     service = build('calendar', 'v3', credentials=creds)
