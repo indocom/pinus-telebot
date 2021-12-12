@@ -296,7 +296,7 @@ def remindme(update, context):
     fieldname = ['id', 'keyword']
     writeToCSV("events_subscription.txt", eventsub, fieldname)
     with open("events_subscription.txt",  "rb") as f:
-        dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
+        dbx.files_upload(f.read(), "/events_subscription.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
     reply = 'Reminder is on for events with keyword: '+keyword
     context.bot.send_message(chat_id=update.message.chat_id, text=reply)
 
