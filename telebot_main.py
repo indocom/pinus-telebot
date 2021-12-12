@@ -13,9 +13,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from oauth2client.client import GoogleCredentials
 from csv_handler import *
-import json
 
 
 BOT_API_TOKEN = os.environ.get('BOT_API_TOKEN')
@@ -199,11 +197,8 @@ def connectCalendar():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    credentials = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    print("Kawaii")
-    print(credentials)
-    credentials_json = json.loads(credentials)
-    creds = GoogleCredentials.from_json(credentials_json)
+    if os.path.exists('google-credentials.json'):
+        creds = Credentials.from_authorized_user_file('google-credentials.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     service = build('calendar', 'v3', credentials=creds)
 
