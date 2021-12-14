@@ -13,6 +13,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from oauth2client.client import GoogleCredentials
 from csv_handler import *
 from dotenv import load_dotenv
 
@@ -443,7 +444,7 @@ def remove_repo(update, context):
 
 #job queues
 job = updater.job_queue.run_repeating(broadcast_pull_request, interval=300, first=1)
-# job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
+job1 = updater.job_queue.run_repeating(reminder, interval = 120, first = 1)
 
 #List of Command Handlers
 start_handler = CommandHandler('start', start)
@@ -477,14 +478,14 @@ dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
 #WebHook to be used when deploying the bot
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
 
 #This is to start testing
-# updater.start_polling()
+updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
