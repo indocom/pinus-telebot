@@ -325,8 +325,7 @@ def addevent(update, context):
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    credentials_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    creds = GoogleCredentials.from_json(credentials_json)
+    creds = Credentials.from_authorized_user_file('google-credentials.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     
     service = build('calendar', 'v3', credentials=creds)
