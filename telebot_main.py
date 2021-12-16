@@ -233,8 +233,16 @@ def getevents(update, context):
     connectCalendar()
     f = open("events.txt", "r")
     reply_text = ("Getting the upcoming 10 events: \n")
-    for i in f:
-        reply_text += (i)
+    index = 1
+    for event in f:
+        index_of_time = event.find("T")
+        Date = event[0:index_of_time]
+        Hour = event[index_of_time + 1 : index_of_time + 15]
+        Details = event[index_of_time + 15: ]
+        reply_string = str(index) + ". " + "Date: " + Date + " Time: " + Hour + " \n    " + Details
+        index += 1 
+        reply_text += reply_string
+        
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
 
@@ -411,7 +419,7 @@ def add_repo(update, context):
 
     with open("repo_list.txt",  "rb") as f:
         dbx.files_upload(f.read(), "/repo_list.txt", mute=True,  mode=dropbox.files.WriteMode.overwrite)    
-    update.message.reply_text(text + str(repo_data))
+    update.message.reply_text(text)
 
 def remove_repo(update, context):
     dbx = connect_dropbox()
@@ -477,14 +485,14 @@ dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
 #WebHook to be used when deploying the bot
-updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=BOT_API_TOKEN
-                          )
-updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
+# updater.start_webhook(listen="0.0.0.0",
+#                           port=int(PORT),
+#                           url_path=BOT_API_TOKEN
+#                           )
+# updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
 
 #This is to start testing
-# updater.start_polling()
+updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
