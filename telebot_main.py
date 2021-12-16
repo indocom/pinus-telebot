@@ -485,14 +485,14 @@ dispatcher.add_handler(addevent_handler)
 dispatcher.add_handler(unknown_handler)
 
 #WebHook to be used when deploying the bot
-# updater.start_webhook(listen="0.0.0.0",
-#                           port=int(PORT),
-#                           url_path=BOT_API_TOKEN
-#                           )
-# updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
+updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=BOT_API_TOKEN
+                          )
+updater.bot.set_webhook(DEPLOY_URL + BOT_API_TOKEN)
 
 #This is to start testing
-updater.start_polling()
+# updater.start_polling()
 print("Server Bot is up and running !")
 updater.idle()
 print("Listening .... ")
