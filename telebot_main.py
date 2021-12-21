@@ -75,12 +75,12 @@ def list(update, context):
     
 def help_func(update, context):
     text = ("Hi, here is a list of commands\n\n")
-    text += ("/repo:  Get the list of all repositories inside github.com/indocom\n\n")
-    text += ("/status: Get the list of all repositories that you have subscribed\n\n")
-    text += ("/add_repo <repo link>: Subscribe to a particular repo\n\n")
+    text += ("/repo:  Show the list of all repositories inside github.com/indocom\n\n")
+    text += ("/status: Show list of all repositories that you have subscribed\n\n")
+    text += ("/add_repo <REPO_LINK>: Subscribe and receive reminders of new pull requests in the specified repo\n\n")
     text += ("/getevents: Get the upcoming 10 events\n\n")
-    text += ("/addevent: Add an event\n\n")
-    text += ("/remindme: Remind me for events with specific keyword\n\n")
+    text += ("/addevent <EVENT_NAME> <EVENT_DATE> <EVENT_TIME> <EVENT_DESC>: Add an event (The event must follow the format of [EVENT_TAG] EVENT_NAME) e.g. [WINTER] Sprint Meeting\n\n")
+    text += ("/remindme: Registers the user to get reminder of specific event based on the specified tag. e.g. /remindme winter will remind user of events with [WINTER] in the title\n\n")
     context.bot.send_message(chat_id=update.effective_chat.id, text = text)
 
 def unknown(update, context):
